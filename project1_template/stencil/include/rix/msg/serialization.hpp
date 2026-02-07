@@ -19,6 +19,56 @@ template <typename T> inline size_t size_number(const T &val) {
   return sizeof(T);
 }
 
+inline size_t size_string(const std::string &str) {
+  return sizeof(uint32_t) + str.size();
+}
+
+inline size_t size_message(const Message &msg) { return msg.size(); }
+
+template <typename T, size_t N>
+inline size_t size_number_array(const std::array<T, N> &arr) {
+  size_t total = 0;
+  for (const auto &val : arr)
+    total += size_number(val);
+  return total;
+}
+
+template <size_t N>
+inline size_t size_string_array(const std::array<std::string, N> &arr) {
+  size_t total = 0;
+  for (const auto &str : arr)
+    total += size_string(str);
+  return total;
+}
+
+template <typename T, size_t N>
+inline size_t size_message_array(const std::array<T, N> &arr) {
+  size_t total = 0;
+  for (const auto &msg : arr)
+    total += size_message(msg);
+  return total;
+}
+
+template <typename T>
+inline size_t size_number_vector(const std::vector<T> &vec) {
+  return sizeof(uint32_t) + sizeof(T) * vec.size();
+}
+
+inline size_t size_string_vector(const std::vector<std::string> &vec) {
+  size_t total = sizeof(uint32_t);
+  for (const auto &str : vec)
+    total += size_string(str);
+  return total;
+}
+
+template <typename T>
+inline size_t size_message_vector(const std::vector<T> &vec) {
+  size_t total = sizeof(uint32_t);
+  for (const auto &msg : vec)
+    total += size_message(msg);
+  return total;
+}
+
 template <typename T>
 inline void serialize_number(uint8_t *dst, size_t &offset, const T &src) {
   static_assert(std::is_arithmetic<T>::value, "T must be an arithmetic type");
@@ -189,32 +239,5 @@ inline bool deserialize_message_vector(std::vector<T> &dst, const uint8_t *src,
 }
 
 } // namespace detail
-
-// Public API wrappers in rix::msg namespace
-template <typename T> inline size_t size_number(const T &val) {
-  return detail::size_number(val);
-}
-
-template <typename T>
-inline void serialize_number(uint8_t *dst, size_t &offset, const T &src) {
-  detail::serialize_number(dst, offset, src);
-}
-
-template <typename T>
-inline bool deserialize_number(T &dst, const uint8_t *src, size_t size,
-                               size_t &offset) {
-  return detail::deserialize_number(dst, src, size, offset);
-}
-
-inline void serialize_string(uint8_t *dst, size_t &offset,
-                             const std::string &src) {
-  detail::serialize_string(dst, offset, src);
-}
-
-inline bool deserialize_string(std::string &dst, const uint8_t *src,
-                               size_t size, size_t &offset) {
-  return detail::deserialize_string(dst, src, size, offset);
-}
-
 } // namespace msg
 } // namespace rix
