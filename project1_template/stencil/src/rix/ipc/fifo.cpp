@@ -1,4 +1,5 @@
 #include "rix/ipc/fifo.hpp"
+#include <cerrno>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -14,8 +15,15 @@ Fifo::Fifo(const std::string &pathname, Mode mode, bool nonblocking)
     : pathname_(pathname), mode_(mode) {
 
   // Create the FIFO with read/write permissions for the user (0666)
-  // If it already exists, mkfifo returns -1; we proceed to open it regardless.
-  ::mkfifo(pathname_.c_str(), 0666);
+  // If it already exists (EEXIST), we proceed to open it
+  int mkfifo_result = ::mkfifo(pathname_.c_str(), 0666);
+  if (mkfifo_result == -1 && errno != EEXIST) {
+    // mkfifo failed for a reason other than "file exists"
+    perror("mkfifo");
+    fd_ = -1;
+    return;
+  }
+  // If EEXIST, the FIFO already exists, which is fine - proceed to open
 
   int flags;
   if (mode == Mode::READ) {
@@ -30,6 +38,9 @@ Fifo::Fifo(const std::string &pathname, Mode mode, bool nonblocking)
 
   // Use the open() system call to get the file descriptor
   fd_ = ::open(pathname_.c_str(), flags);
+  if (fd_ == -1) {
+    perror("open");
+  }
 }
 
 Fifo::Fifo() : File(), pathname_(""), mode_(Mode::READ) {}
