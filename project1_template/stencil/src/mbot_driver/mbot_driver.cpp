@@ -1,4 +1,5 @@
 #include "mbot_driver/mbot_driver.hpp"
+#include <iostream>
 
 using namespace rix::ipc;
 using namespace rix::msg;
@@ -16,20 +17,24 @@ void MBotDriver::spin(std::unique_ptr<interfaces::Notification> notif) {
     if (notif->wait(timeout)) {
       // SIGINT received, stop the mbot
       geometry::Twist2DStamped stop_cmd;
-      stop_cmd.twist = {0.0, 0.0, 0.0};
+      stop_cmd.twist.vx = 0.0;
+      stop_cmd.twist.vy = 0.0;
+      stop_cmd.twist.wz = 0.0;
       mbot->drive(stop_cmd);
       break;
     }
 
     // Read size prefix (4-byte UInt32)
-    UInt32 msg_size;
+    standard::UInt32 msg_size;
     uint8_t size_buf[4];
     ssize_t bytes_read = input->read(size_buf, 4);
 
     if (bytes_read == 0) {
       // EOF reached, stop the mbot
       geometry::Twist2DStamped stop_cmd;
-      stop_cmd.twist = {0.0, 0.0, 0.0};
+      stop_cmd.twist.vx = 0.0;
+      stop_cmd.twist.vy = 0.0;
+      stop_cmd.twist.wz = 0.0;
       mbot->drive(stop_cmd);
       break;
     }
@@ -64,6 +69,11 @@ void MBotDriver::spin(std::unique_ptr<interfaces::Notification> notif) {
     geometry::Twist2DStamped twist_msg;
     offset = 0;
     if (twist_msg.deserialize(buffer.data(), buffer.size(), offset)) {
+      // Log the received drive command
+      std::cout << "Received Drive Command: "
+                << "vx=" << twist_msg.twist.vx << ", vy=" << twist_msg.twist.vy
+                << ", wz=" << twist_msg.twist.wz << std::endl;
+
       // Command the mbot with the full message
       mbot->drive(twist_msg);
     }
