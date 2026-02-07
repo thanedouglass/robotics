@@ -64,9 +64,12 @@ bool Signal::wait(const rix::util::Duration &d) const {
 
   // The read end of the pipe is index 0
   if (notifier[signum_].pipe[0].wait_for_readable(d)) {
-    uint8_t buf;
-    // Consume the byte written by the handler to reset the "readable" state
-    notifier[signum_].pipe[0].read(&buf, 1);
+    // Consume ALL bytes written by the handler to reset the "readable" state
+    // Multiple signals may have been raised, writing multiple bytes
+    uint8_t buf[256];
+    while (notifier[signum_].pipe[0].read(buf, sizeof(buf)) > 0) {
+      // Keep reading until pipe is empty
+    }
     return true;
   }
   return false;
